@@ -1,7 +1,9 @@
 ﻿using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using CloudinaryDotNet.Actions;
 using DatingApp.DTOs;
 using DatingApp.Entities;
+using DatingApp.Helpers;
 using DatingApp.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -52,23 +54,41 @@ namespace DatingApp.Data
             //it will not show password hash and salt
             //it will use calculate age in auto mapper profiles
             return await _context.Users
-                .Where(x => x.UserName == username)
                 //.Select(user => new MemberDto
                 //{
                 //    Id = user.Id,
                 //    UserName = user.UserName,
                 //    KnownAs = user.KnownAs
                 //}).SingleOrDefaultAsync();
+                .Where(x => x.UserName == username)
                 .ProjectTo<MemberDto>(_mapper.ConfigurationProvider)
                 .SingleOrDefaultAsync();
         }
 
-        public async Task<IEnumerable<MemberDto>> GetMembersAsync()
+        public async Task<PagedList<MemberDto>> GetMembersAsync(UserParams userParams)
         {
+            var query = _context.Users.AsQueryable();
+            //exclude current user from result and filter by gender
+            query = query.Where(u => u.UserName != userParams.CurrentUsername);
+            query = query.Where(u => u.Gender == userParams.Gender);
+
+            //filter by age
+            var minDob = DateTime.Today.AddYears(-userParams.MaxAge - 1);
+            var maxDob = DateTime.Today.AddYears(-userParams.MinAge);
+
+            query = query.Where(u => u.DateOfBirth >= minDob && u.DateOfBirth <= maxDob);
+
+            //sort by lastActive
+            query = userParams.OrderBy switch
+            {
+                "created" => query.OrderByDescending(u => u.Created),
+                _ => query.OrderByDescending(u => u.LastActive)
+            };
+
             //it will not show password hash and salt   
-            return await _context.Users
-                .ProjectTo<MemberDto>(_mapper.ConfigurationProvider)
-                .ToListAsync();
+            return await PagedList<MemberDto>.CreateAync(
+                query.AsNoTracking().ProjectTo<MemberDto>(_mapper.ConfigurationProvider), 
+                userParams.PageNumber, userParams.PageSize);
         }
     }
 }
