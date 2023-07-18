@@ -30,7 +30,7 @@ namespace DatingApp.Controllers
             
             if(username == createMessageDto.RecipientUsername.ToLower())
             {
-                return BadRequest("You cannot send messages to yourself.");
+                return BadRequest("You cannot send message to yourself.");
             }
 
             var sender = await _userRepository.GetUserbyUsernameAsync(username);

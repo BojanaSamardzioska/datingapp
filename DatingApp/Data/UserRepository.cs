@@ -86,7 +86,7 @@ namespace DatingApp.Data
             };
 
             //it will not show password hash and salt   
-            return await PagedList<MemberDto>.CreateAync(
+            return await PagedList<MemberDto>.CreateAsync(
                 query.AsNoTracking().ProjectTo<MemberDto>(_mapper.ConfigurationProvider), 
                 userParams.PageNumber, userParams.PageSize);
         }
